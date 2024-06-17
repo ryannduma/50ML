@@ -1,7 +1,7 @@
 import csv
 import sys
 from heapq import heappop, heappush
-
+from util import Node, StackFrontier, QueueFrontier
 class Movie:
     def __init__(self, title):
         self.title = title

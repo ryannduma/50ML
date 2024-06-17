@@ -1,8 +1,7 @@
 import csv
 import sys
-from heapq import heappop, heappush
-from util import Node, StackFrontier, QueueFrontier
 from collections import deque
+from util import Node, StackFrontier, QueueFrontier
 
 # Maps names to a set of corresponding person_ids
 names = {}
@@ -20,9 +19,7 @@ class Node:
         self.action = action
 
     def __lt__(self, other):
-        return False  # This might need a proper condition based on your needs.
-
-
+        return False  # Adjust as necessary based on sorting needs.
 
 def load_data(directory):
     """
@@ -57,21 +54,10 @@ def load_data(directory):
         reader = csv.DictReader(f)
         for row in reader:
             try:
-                person_id = row["person_id"]
-                movie_id = row["movie_id"]
-                people[person_id]["movies"].add(movie_id)
-                movies[movie_id]["stars"].add(person_id)
+                people[row["person_id"]]["movies"].add(row["movie_id"])
+                movies[row["movie_id"]]["stars"].add(row["person_id"])
             except KeyError:
                 pass
-
-    # Precompute neighbors for each person
-    for person_id in people:
-        neighbors[person_id] = set(
-            person_id_2
-            for movie_id in people[person_id]["movies"]
-            for person_id_2 in movies[movie_id]["stars"]
-            if person_id_2 != person_id
-        )
 
 def main():
     if len(sys.argv) > 2:
@@ -106,21 +92,16 @@ def main():
 
 def shortest_path(source, target):
     """Returns the shortest path from source to target using BFS."""
-    # Initialize the frontier with the starting position
     frontier = deque([Node(source, None, None)])
-
-    # Initialize an empty set to keep track of visited nodes
+    frontier_set = {source}
     explored = set()
 
-    # Loop until there are no nodes left to explore
     while frontier:
-        # Remove a node from the frontier
         current_node = frontier.popleft()
         current_person = current_node.state
+        frontier_set.remove(current_person)
 
-        # Goal check upon adding to the frontier
         if current_person == target:
-            # If the target is found, reconstruct the path
             path = []
             while current_node.parent:
                 path.append((current_node.action, current_node.state))
@@ -128,23 +109,18 @@ def shortest_path(source, target):
             path.reverse()
             return path
 
-        # Mark the node as explored
         explored.add(current_person)
 
-        # Add neighbors to the frontier
         for movie_id, neighbor in neighbors_for_person(current_person):
-            if neighbor not in explored and not any(n.state == neighbor for n in frontier):
-                new_node = Node(neighbor, current_node, movie_id)
-                frontier.append(new_node)
+            if neighbor not in explored and neighbor not in frontier_set:
+                frontier.append(Node(neighbor, current_node, movie_id))
+                frontier_set.add(neighbor)
 
-    # Return None if no path is found
     return None
-
 
 def person_id_for_name(name):
     """
-    Returns the IMDB id for a person's name,
-    resolving ambiguities as needed.
+    Returns the IMDB id for a person's name, resolving ambiguities as needed.
     """
     person_ids = list(names.get(name.lower(), set()))
     if len(person_ids) == 0:
@@ -161,16 +137,13 @@ def person_id_for_name(name):
             if person_id in person_ids:
                 return person_id
         except ValueError:
-            pass
-        return None
+            return None
     else:
         return person_ids[0]
 
-
 def neighbors_for_person(person_id):
     """
-    Returns (movie_id, person_id) pairs for people
-    who starred with a given person.
+    Returns (movie_id, person_id) pairs for people who starred with a given person.
     """
     movie_ids = people[person_id]["movies"]
     neighbors = set()
@@ -178,7 +151,6 @@ def neighbors_for_person(person_id):
         for person_id in movies[movie_id]["stars"]:
             neighbors.add((movie_id, person_id))
     return neighbors
-
 
 if __name__ == "__main__":
     main()
